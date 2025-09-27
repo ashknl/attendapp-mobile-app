@@ -119,6 +119,17 @@ export default function TabLayout() {
                         ),
                     }}
                 />
+
+                <Tabs.Screen
+                    name="settings"
+                    options={{
+                        title: 'settings',
+                        tabBarIcon: ({ color, size }) => (
+                            <Ionicons name="settings-outline" size={24} color={color} />
+                        ),
+                    }}
+                />
+
                 {/* Hide teacher screens for students */}
                 <Tabs.Screen
                     name="teacher-dashboard"

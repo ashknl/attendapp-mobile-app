@@ -13,6 +13,8 @@ import {
     View,
 } from 'react-native';
 
+import { router } from 'expo-router';
+
 export default function TeacherClasses() {
     const { session } = useSession();
     const [classes, setClasses] = useState([]);
@@ -80,7 +82,12 @@ export default function TeacherClasses() {
     };
 
     const toggleClassDropdown = (classId) => {
-        setExpandedClass(expandedClass === classId ? null : classId);
+        router.navigate({
+            pathname: "attendance",
+            params: {
+                "class_id": classId
+            }
+        })
     };
 
     const handleMarkAttendance = async (classItem) => {

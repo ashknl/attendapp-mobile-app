@@ -21,6 +21,7 @@ const RegisterScreen = () => {
     const [role, setRole] = useState('student'); // 'student' or 'teacher'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [rollno, setRollno] = useState(0)
 
     const handleSubmit = () => {
         console.log(name)
