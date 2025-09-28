@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
     header: {
         alignItems: 'center',
         marginBottom: 24,
+        marginTop:24
     },
     title: {
         fontSize: 28,

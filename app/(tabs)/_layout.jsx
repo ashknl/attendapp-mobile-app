@@ -10,7 +10,7 @@ export default function TabLayout() {
 
     // If no session, don't render tabs (should redirect to auth)
     if (!session?.token || !session?.role) {
-        router.replace("sign-in")
+        router.navigate("sign-in")
     }
 
     const isTeacher = sessionObj.role === 'teacher';

@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 const API_URL = "https://nonnomadic-unbleached-otilia.ngrok-free.app"
 
@@ -15,9 +16,22 @@ const EnableAttendanceScreen = () => {
     const [apiResponse, setApiResponse] = useState('');
     const [isPolling, setIsPolling] = useState(false);
 
+    // New state for attendance features
+    const [qrCodeEnabled, setQrCodeEnabled] = useState(false);
+    const [facialVerificationEnabled, setFacialVerificationEnabled] = useState(true);
+    const [showQRModal, setShowQRModal] = useState(false);
+
+    // Generate a random secret for QR code (you might want to get this from your API)
+    const generateSecret = () => {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    };
+
+    const [qrSecret] = useState(generateSecret());
+
     let sessionObj = JSON.parse(session)
 
     console.log(`enable-attendance:role is`, sessionObj.role)
+    console.log("qrCode status:", qrCodeEnabled)
 
     useEffect(() => {
         fetchRecentAttendance();
@@ -67,7 +81,8 @@ const EnableAttendanceScreen = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    class_code: class_id
+                    class_code: class_id,
+                    is_qr_enabled: qrCodeEnabled ? '1' : '0'
                 }),
             });
 
@@ -93,7 +108,8 @@ const EnableAttendanceScreen = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    class_code: class_id
+                    class_code: class_id,
+                    is_qr_enabled: qrCodeEnabled
                 }),
             });
 
@@ -112,6 +128,35 @@ const EnableAttendanceScreen = () => {
         setShowModal(false);
         setApiResponse('');
     };
+
+    const closeQRModal = () => {
+        setShowQRModal(false);
+    };
+
+    const handleQRCodeToggle = () => {
+        const newQrCodeEnabled = !qrCodeEnabled;
+        setQrCodeEnabled(newQrCodeEnabled);
+
+        if (newQrCodeEnabled) {
+            setShowQRModal(true);
+        }
+    };
+
+    const handleFacialVerificationToggle = () => {
+        setFacialVerificationEnabled(!facialVerificationEnabled);
+    };
+
+    const qrUrl = `${API_URL}/qr/verify/${class_id}?secret=${qrSecret}`;
+
+    const CheckboxItem = ({ label, checked, onToggle, icon }) => (
+        <Pressable style={styles.checkboxItem} onPress={onToggle}>
+            <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                {checked && <Feather name="check" size={14} color="#fff" />}
+            </View>
+            <Feather name={icon} size={18} color="#666" style={styles.checkboxIcon} />
+            <Text style={styles.checkboxLabel}>{label}</Text>
+        </Pressable>
+    );
 
     return (
         <ScrollView style={styles.container}>
@@ -144,6 +189,25 @@ const EnableAttendanceScreen = () => {
                     </View>
                 </View>
 
+                {/* Attendance Features Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Attendance Features</Text>
+                    <View style={styles.featuresContainer}>
+                        <CheckboxItem
+                            label="QR Code"
+                            checked={qrCodeEnabled}
+                            onToggle={handleQRCodeToggle}
+                            icon="qr-code"
+                        />
+                        <CheckboxItem
+                            label="Facial Verification"
+                            checked={facialVerificationEnabled}
+                            onToggle={handleFacialVerificationToggle}
+                            icon="user-check"
+                        />
+                    </View>
+                </View>
+
                 {/* Recent Attendance Section */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
@@ -171,6 +235,7 @@ const EnableAttendanceScreen = () => {
                 </View>
             </View>
 
+            {/* API Response Modal */}
             <Modal
                 visible={showModal}
                 transparent={true}
@@ -186,6 +251,44 @@ const EnableAttendanceScreen = () => {
                         <Pressable style={styles.modalButton} onPress={closeModal}>
                             <Text style={styles.modalButtonText}>OK</Text>
                         </Pressable>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* QR Code Modal */}
+            <Modal
+                visible={showQRModal}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={closeQRModal}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.qrModalContent}>
+                        <View style={styles.qrModalHeader}>
+                            <Text style={styles.qrModalTitle}>QR Code for Attendance</Text>
+                            <Pressable onPress={closeQRModal}>
+                                <Feather name="x" size={24} color="#666" />
+                            </Pressable>
+                        </View>
+
+                        <View style={styles.qrCodeContainer}>
+                            <QRCode
+                                value={qrUrl}
+                                size={250}
+                                color="#000"
+                                backgroundColor="#fff"
+                            />
+                        </View>
+
+                        <Text style={styles.qrUrlText}>
+                            Students can scan this QR code to mark their attendance
+                        </Text>
+
+                        <View style={styles.qrModalButtons}>
+                            <Pressable style={styles.qrModalButton} onPress={closeQRModal}>
+                                <Text style={styles.qrModalButtonText}>Close</Text>
+                            </Pressable>
+                        </View>
                     </View>
                 </View>
             </Modal>
@@ -251,6 +354,42 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.6,
+    },
+    // New styles for attendance features
+    featuresContainer: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        padding: 16,
+    },
+    checkboxItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+    },
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: '#ddd',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    checkboxChecked: {
+        backgroundColor: '#007AFF',
+        borderColor: '#007AFF',
+    },
+    checkboxIcon: {
+        marginRight: 8,
+    },
+    checkboxLabel: {
+        fontSize: 16,
+        color: '#333',
+        flex: 1,
     },
     attendanceContainer: {
         backgroundColor: '#fff',
@@ -319,6 +458,63 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    // QR Modal styles
+    qrModalContent: {
+        backgroundColor: '#fff',
+        padding: 24,
+        borderRadius: 16,
+        width: '90%',
+        maxWidth: 350,
+        alignItems: 'center',
+    },
+    qrModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        marginBottom: 24,
+    },
+    qrModalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    qrCodeContainer: {
+        padding: 16,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        marginBottom: 20,
+    },
+    qrUrlText: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 20,
+    },
+    qrModalButtons: {
+        width: '100%',
+    },
+    qrModalButton: {
+        backgroundColor: '#007AFF',
+        padding: 14,
+        borderRadius: 8,
+        alignItems: 'center',
+        width: '100%',
+    },
+    qrModalButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
